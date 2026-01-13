@@ -1,0 +1,5 @@
+{
+  "name": "Copy of FundTracker AI",
+  "description": "An intelligent fund tracking application that uses Gemini and Google Search to retrieve real-time fund information via ISIN codes, providing price updates, portfolio visualization, and AI-driven analysis.",
+  "requestFramePermissions": []
+}
