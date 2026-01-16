@@ -1,0 +1,296 @@
+import React, { createContext, useState, useContext, useEffect } from 'react';
+
+export type Language = 'zh-TW' | 'en';
+
+export const translations = {
+  'zh-TW': {
+    appTitle: 'FundTracker AI',
+    addFund: '新增基金',
+    totalMarketValue: '模擬投資組合市值',
+    avgRisk: '平均風險等級 (1-7)',
+    trackedFunds: '追蹤基金',
+    analysisTitle: 'AI 投資組合分析',
+    analyzingBtn: '分析中...',
+    reanalyzeBtn: '重新分析',
+    analyzeBtn: 'AI 智能分析',
+    analysisPlaceholder: '點擊上方按鈕，讓 AI 為您的投資組合提供專業分析與建議。',
+    analysisPlaceholderNoFunds: '新增基金後即可使用 AI 智能分析功能。',
+    myWatchlist: '我的觀察清單',
+    showAll: '顯示全部',
+    favoritesOnly: '僅顯示最愛',
+    noFavorites: '尚無最愛基金',
+    noFavoritesDesc: '點擊星號圖示將基金加入最愛。',
+    noFunds: '尚未追蹤任何基金',
+    noFundsDesc: '點擊右上角「新增基金」開始建立您的投資組合。',
+    today: '今日',
+    ERROR_NOT_FOUND: '找不到基金資訊',
+    performance: '績效表現',
+    ytd: '年初至今',
+    month1: '1個月',
+    month3: '3個月',
+    month6: '6個月',
+    year1: '1年',
+    year3: '3年',
+    year5: '5年',
+    dividendInfo: '配息資訊',
+    annualYield: '年息率',
+    paymentFrequency: '配息頻率',
+    holdings: '持有單位',
+    units: '單位',
+    estMarketValue: '預估市值',
+    buy: '買入',
+    sell: '賣出',
+    collapse: '收合詳細資訊',
+    expand: '展開詳細資訊',
+    details: '基金詳情',
+    strategy: '投資策略',
+    noDescription: '暫無描述',
+    dividendPolicy: '配息政策',
+    dividendHistory: '歷史配息 (近3年)',
+    dhPaymentDate: '發放日',
+    dhExDate: '除息日',
+    dhAmount: '金額',
+    dhReinvest: '再投資淨值',
+    dhYield: '年息率',
+    refresh: '更新資訊',
+    remove: '移除',
+    news: '相關新聞',
+    selected: '已選擇 {count} 項',
+    batchFavorite: '加入/移除最愛',
+    compare: '比較',
+    batchRemove: '批次移除',
+    backgroundProcessing: '背景處理中...',
+    settingsTitle: '設定',
+    showPerformance: '顯示績效',
+    showChart: '顯示走勢圖',
+    showDividends: '顯示配息',
+    compactMode: '緊湊模式',
+    close: '關閉',
+    addFundModalTitle: '新增基金',
+    addFundModalDesc: '輸入 ISIN 代碼或基金名稱，AI 將自動搜尋。',
+    isinLabel: 'ISIN 代碼 / 基金名稱',
+    isinPlaceholder: '例如：LU1234567890 或 安聯收益成長',
+    isinHelp: '支援每行輸入一檔基金',
+    searchInfo: '支援模糊搜尋！您可以輸入「美國科技 ETF」或「高配息債券」，AI 會為您找到最匹配的熱門基金。',
+    cancel: '取消',
+    add: '新增',
+    compareTitle: '基金比較',
+    price: '淨值',
+    domicile: '註冊地',
+    dividendPerUnit: '每單位配息',
+    lastDividendDate: '最近配息日',
+    tradeBuyTitle: '買入基金',
+    tradeSellTitle: '賣出基金',
+    currentHoldings: '目前持有',
+    unitMode: '單位數模式',
+    amountMode: '金額模式',
+    tradePrice: '交易淨值',
+    tradeUnits: '交易單位數',
+    tradeAmount: '交易金額',
+    feeRate: '手續費率',
+    feeAmount: '手續費金額',
+    estTotalCost: '預估總成本',
+    subtotal: '小計',
+    estTotalReturn: '預估總回收',
+    confirmBuy: '確認買入',
+    confirmSell: '確認賣出',
+    successAdd: '成功新增 {count} 檔基金',
+    partialAdd: '成功新增 {success} 檔，失敗 {fail} 檔',
+    failAdd: '新增失敗，請檢查輸入內容',
+    duplicateFund: '基金已在清單中',
+    refreshSuccess: '更新成功',
+    refreshFail: '更新失敗',
+    tradeSuccess: '{action}成功：{name} {quantity} 單位',
+    buyAction: '買入',
+    sellAction: '賣出',
+    removeConfirm: '確定要移除嗎？',
+    removed: '已移除',
+    
+    // New Tabs
+    tabSummary: '基金概要',
+    tabPerformance: '績效',
+    tabData: '基金資料',
+    tabManager: '基金經理人',
+    tabDividends: '配息紀錄',
+    tabPortfolio: '投資標的',
+    tabDocuments: '相關文件',
+    
+    // New Fields
+    fundSize: '基金規模',
+    launchDate: '成立日期',
+    topHoldings: '前五大持股',
+    sectorAllocation: '產業配置',
+    download: '下載',
+    noDocs: '找不到相關文件連結',
+    noHoldings: '暫無持股資料',
+    noSectors: '暫無產業配置資料',
+  },
+  'en': {
+    appTitle: 'FundTracker AI',
+    addFund: 'Add Fund',
+    totalMarketValue: 'Portfolio Value',
+    avgRisk: 'Avg Risk (1-7)',
+    trackedFunds: 'Funds',
+    analysisTitle: 'AI Portfolio Analysis',
+    analyzingBtn: 'Analyzing...',
+    reanalyzeBtn: 'Re-analyze',
+    analyzeBtn: 'AI Analysis',
+    analysisPlaceholder: 'Click the button above to get professional AI analysis for your portfolio.',
+    analysisPlaceholderNoFunds: 'Add funds to enable AI analysis.',
+    myWatchlist: 'My Watchlist',
+    showAll: 'Show All',
+    favoritesOnly: 'Favorites Only',
+    noFavorites: 'No favorites yet',
+    noFavoritesDesc: 'Click the star icon to add funds to favorites.',
+    noFunds: 'No funds tracked',
+    noFundsDesc: 'Click "Add Fund" to start building your portfolio.',
+    today: 'Today',
+    ERROR_NOT_FOUND: 'Fund Not Found',
+    performance: 'Performance',
+    ytd: 'YTD',
+    month1: '1M',
+    month3: '3M',
+    month6: '6M',
+    year1: '1Y',
+    year3: '3Y',
+    year5: '5Y',
+    dividendInfo: 'Dividend',
+    annualYield: 'Yield',
+    paymentFrequency: 'Frequency',
+    holdings: 'Holdings',
+    units: 'Units',
+    estMarketValue: 'Est. Value',
+    buy: 'Buy',
+    sell: 'Sell',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    details: 'Details',
+    strategy: 'Strategy',
+    noDescription: 'No description available',
+    dividendPolicy: 'Policy',
+    dividendHistory: 'Dividend History (3Y)',
+    dhPaymentDate: 'Pay Date',
+    dhExDate: 'Ex Date',
+    dhAmount: 'Amount',
+    dhReinvest: 'Reinvest NAV',
+    dhYield: 'Yield',
+    refresh: 'Refresh',
+    remove: 'Remove',
+    news: 'News',
+    selected: '{count} Selected',
+    batchFavorite: 'Favorite/Unfavorite',
+    compare: 'Compare',
+    batchRemove: 'Remove Selected',
+    backgroundProcessing: 'Processing...',
+    settingsTitle: 'Settings',
+    showPerformance: 'Show Performance',
+    showChart: 'Show Chart',
+    showDividends: 'Show Dividends',
+    compactMode: 'Compact Mode',
+    close: 'Close',
+    addFundModalTitle: 'Add Fund',
+    addFundModalDesc: 'Enter ISIN or Fund Name. AI will search for it.',
+    isinLabel: 'ISIN / Fund Name',
+    isinPlaceholder: 'e.g., LU1234567890 or Allianz Income',
+    isinHelp: 'One fund per line',
+    searchInfo: 'Fuzzy search supported! Try "US Tech ETF" or "Global Bond".',
+    cancel: 'Cancel',
+    add: 'Add',
+    compareTitle: 'Compare Funds',
+    price: 'NAV',
+    domicile: 'Domicile',
+    dividendPerUnit: 'Div/Unit',
+    lastDividendDate: 'Last Div Date',
+    tradeBuyTitle: 'Buy Fund',
+    tradeSellTitle: 'Sell Fund',
+    currentHoldings: 'Current Holdings',
+    unitMode: 'Units Mode',
+    amountMode: 'Amount Mode',
+    tradePrice: 'NAV',
+    tradeUnits: 'Units',
+    tradeAmount: 'Amount',
+    feeRate: 'Fee Rate',
+    feeAmount: 'Fee Amount',
+    estTotalCost: 'Total Cost',
+    subtotal: 'Subtotal',
+    estTotalReturn: 'Total Return',
+    confirmBuy: 'Confirm Buy',
+    confirmSell: 'Confirm Sell',
+    successAdd: 'Added {count} funds',
+    partialAdd: 'Added {success}, Failed {fail}',
+    failAdd: 'Failed to add funds',
+    duplicateFund: 'Fund already exists',
+    refreshSuccess: 'Updated successfully',
+    refreshFail: 'Update failed',
+    tradeSuccess: '{action} Success: {name} {quantity} units',
+    buyAction: 'Bought',
+    sellAction: 'Sold',
+    removeConfirm: 'Are you sure?',
+    removed: 'Removed',
+    
+    // New Tabs
+    tabSummary: 'Summary',
+    tabPerformance: 'Performance',
+    tabData: 'Fund Data',
+    tabManager: 'Manager',
+    tabDividends: 'Dividends',
+    tabPortfolio: 'Portfolio',
+    tabDocuments: 'Documents',
+
+    // New Fields
+    fundSize: 'Fund Size',
+    launchDate: 'Launch Date',
+    topHoldings: 'Top Holdings',
+    sectorAllocation: 'Sector Allocation',
+    download: 'Download',
+    noDocs: 'No documents found',
+    noHoldings: 'No holdings data',
+    noSectors: 'No sector data',
+  }
+};
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string, params?: any) => string;
+}
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [language, setLanguage] = useState<Language>('zh-TW');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('language') as Language;
+    if (saved) setLanguage(saved);
+  }, []);
+
+  const handleSetLanguage = (lang: Language) => {
+    setLanguage(lang);
+    localStorage.setItem('language', lang);
+  };
+
+  const t = (key: string, params?: any): string => {
+    let text = (translations[language] as any)[key] || key;
+    if (params) {
+      Object.keys(params).forEach(param => {
+        text = text.replace(`{${param}}`, params[param]);
+      });
+    }
+    return text;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+};
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+};

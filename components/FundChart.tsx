@@ -1,7 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,6 +9,7 @@ import {
   Area
 } from 'recharts';
 import { generateMockHistory } from '../constants';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface FundChartProps {
   currentPrice: number;
@@ -18,12 +17,15 @@ interface FundChartProps {
 }
 
 const FundChart: React.FC<FundChartProps> = ({ currentPrice, color = "#3b82f6" }) => {
-  // Memoize the data so it doesn't regenerate on every render, causing the chart to jump
+  const { t } = useLanguage();
+  // Memoize the data so it doesn't regenerate on every render
   const data = useMemo(() => generateMockHistory(currentPrice), [currentPrice]);
 
   return (
-    <div className="h-48 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    // Simplified container structure to fix "width(-1)" warnings from Recharts
+    // Explicitly using block display with width 99% to avoid resize observer loops
+    <div className="w-full h-48 block" style={{ minHeight: '12rem' }}>
+      <ResponsiveContainer width="99%" height="100%">
         <AreaChart
           data={data}
           margin={{
@@ -50,8 +52,8 @@ const FundChart: React.FC<FundChartProps> = ({ currentPrice, color = "#3b82f6" }
           />
           <Tooltip 
             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-            formatter={(value: number) => [value.toFixed(2), '價格']}
-            labelFormatter={(label) => `日期: ${label}`}
+            formatter={(value: number) => [value.toFixed(2), t('price')]}
+            labelFormatter={(label) => `${t('date')}: ${label}`}
           />
           <Area 
             type="monotone" 

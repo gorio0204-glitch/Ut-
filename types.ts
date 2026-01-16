@@ -5,21 +5,76 @@ export interface NewsItem {
   date: string;
 }
 
+export interface DividendHistoryItem {
+  paymentDate: string;
+  exDate: string;
+  amount: number;
+  currency?: string;
+  reinvestmentNav?: number;
+  yield?: number;
+}
+
+export interface DividendInfo {
+  frequency?: string; 
+  lastDate?: string; 
+  amount?: number;
+  currency?: string;
+  yield?: number; 
+  reinvestmentNav?: number; 
+  history?: DividendHistoryItem[]; 
+}
+
+export interface FundPerformance {
+  ytd?: number;
+  month1?: number;
+  month3?: number;
+  month6?: number;
+  year1?: number;
+  year3?: number;
+  year5?: number;
+  volatility3y?: number;
+}
+
+export interface Holding {
+  name: string;
+  percent?: number;
+}
+
+export interface Sector {
+  name: string;
+  percent?: number;
+}
+
+export interface Document {
+  title: string;
+  url: string;
+}
+
 export interface Fund {
   isin: string;
   name: string;
   currency: string;
   price: number;
-  lastUpdated: string; // ISO date string
+  lastUpdated: string; 
   manager: string;
-  description: string;
-  riskRating: number; // 1-7
-  sources?: string[]; // URLs from grounding
-  changePercent?: number; // Simulated or fetched
-  buyPrice?: number; // Subscription price
-  sellPrice?: number; // Redemption price
-  unitsHeld?: number; // Simulated holdings
+  description: string; 
+  domicile?: string;
+  launchDate?: string;
+  riskRating: number; 
+  sources?: string[]; 
+  changePercent?: number; 
+  buyPrice?: number; 
+  sellPrice?: number; 
+  unitsHeld?: number; 
   news?: NewsItem[];
+  performance?: FundPerformance;
+  dividendInfo?: DividendInfo;
+  isFavorite?: boolean;
+  // New Fields
+  fundSize?: string;
+  topHoldings?: Holding[];
+  sectorAllocation?: Sector[];
+  documents?: Document[];
 }
 
 export interface FundHistoryPoint {
@@ -40,6 +95,13 @@ export enum LoadingState {
 }
 
 export interface PortfolioStats {
-  totalValue: number; // Assuming 1 unit of each for simplicity in this demo
+  totalValue: number; 
   assetAllocation: { name: string; value: number }[];
+}
+
+export interface AppPreferences {
+  showPerformance: boolean;
+  showChart: boolean;
+  showDividends: boolean;
+  compactMode: boolean;
 }
