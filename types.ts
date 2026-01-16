@@ -75,6 +75,7 @@ export interface Fund {
   topHoldings?: Holding[];
   sectorAllocation?: Sector[];
   documents?: Document[];
+  ranking?: string; // e.g. "Top 10%", "5/102"
 }
 
 export interface FundHistoryPoint {

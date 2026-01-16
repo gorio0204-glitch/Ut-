@@ -106,7 +106,7 @@ export const translations = {
     removeConfirm: '確定要移除嗎？',
     removed: '已移除',
     
-    // New Tabs
+    // New Tabs & Comparison
     tabSummary: '基金概要',
     tabPerformance: '績效',
     tabData: '基金資料',
@@ -124,6 +124,18 @@ export const translations = {
     noDocs: '找不到相關文件連結',
     noHoldings: '暫無持股資料',
     noSectors: '暫無產業配置資料',
+    riskMetrics: '風險指標',
+    volatility: '年化標準差 (3年)',
+    categoryRank: '同類型基金參考排名',
+    
+    // Chart Ranges
+    range1M: '1月',
+    range3M: '3月',
+    range6M: '6月',
+    range1Y: '1年',
+    range3Y: '3年',
+    range5Y: '5年',
+    rangeAll: '全部',
   },
   'en': {
     appTitle: 'FundTracker AI',
@@ -228,7 +240,7 @@ export const translations = {
     removeConfirm: 'Are you sure?',
     removed: 'Removed',
     
-    // New Tabs
+    // New Tabs & Comparison
     tabSummary: 'Summary',
     tabPerformance: 'Performance',
     tabData: 'Fund Data',
@@ -246,6 +258,18 @@ export const translations = {
     noDocs: 'No documents found',
     noHoldings: 'No holdings data',
     noSectors: 'No sector data',
+    riskMetrics: 'Risk Metrics',
+    volatility: 'Volatility (3Y)',
+    categoryRank: 'Category Rank',
+    
+    // Chart Ranges
+    range1M: '1M',
+    range3M: '3M',
+    range6M: '6M',
+    range1Y: '1Y',
+    range3Y: '3Y',
+    range5Y: '5Y',
+    rangeAll: 'All',
   }
 };
 

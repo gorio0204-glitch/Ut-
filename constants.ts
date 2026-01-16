@@ -2,33 +2,37 @@ export const APP_TITLE = "FundTracker AI";
 
 // A mock initial state if local storage is empty
 export const DEFAULT_FUNDS = [
-  // Intentionally empty to encourage user interaction, 
-  // or could add a popular one like 'US0378331005' (Apple) but ISINs for funds are usually like 'LU...'
+  // Intentionally empty to encourage user interaction
 ];
 
 export const MOCK_HISTORY_DAYS = 30;
 
 // Helper to generate a simulated history based on the current price
-// to make the charts look functional (since we can't fetch 30 days of history via search efficiently)
+// We generate history backwards from today to ensure continuity
 export const generateMockHistory = (currentPrice: number, days: number = 30): { date: string; value: number }[] => {
   const history = [];
   let price = currentPrice;
   const now = new Date();
   
+  // Volatility adjustment based on timeframe
+  // Daily changes are usually small, but for longer periods we want realistic drift
+  const dailyVol = 0.015; // 1.5% daily volatility approximation for random walk
+
   for (let i = 0; i < days; i++) {
     const date = new Date();
-    date.setDate(now.getDate() - (days - i));
+    date.setDate(now.getDate() - (i + 1));
     
-    // Random walk
-    const change = (Math.random() - 0.5) * (currentPrice * 0.05);
-    price = price - change; // Reverse calculation from current
+    // Random walk step backwards: P_prev = P_curr / (1 + change) approx P_curr * (1 - change)
+    const changePercent = (Math.random() - 0.5) * dailyVol;
+    price = price * (1 - changePercent);
     
-    history.push({
+    history.unshift({
       date: date.toISOString().split('T')[0],
-      value: Number(price.toFixed(2))
+      value: Number(price.toFixed(4))
     });
   }
-  // Ensure the last point connects to current price
+  
+  // Add today's price as the last point
   history.push({
     date: now.toISOString().split('T')[0],
     value: currentPrice

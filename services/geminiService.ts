@@ -33,7 +33,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
     1. **Exact Match**: If "${query}" is a valid ISIN, find that specific fund.
     2. **Fuzzy Name Match**: If "${query}" is a fund name (full or partial) or has typos, use search to find the correct official fund name and ISIN. (e.g. "Allianz Income" -> "Allianz Income and Growth").
     3. **Category Match**: If "${query}" is a generic category (e.g. "US Tech ETF", "Global Bond Fund"), identify the *single most popular/representative* fund for that category.
-    4. **Context**: Use terms like "${query} Morningstar", "${query} Bloomberg", "${query} Factsheet", "${query} Holdings" to ground the search.
+    4. **Context**: Use terms like "${query} Morningstar", "${query} Bloomberg", "${query} Factsheet", "${query} Holdings", "${query} Rank" to ground the search.
 
     Data Extraction Requirements (Language: ${promptLang}):
        - **Identity**: Official Name, ISIN (Correct the ISIN if the user provided a partial one).
@@ -43,6 +43,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
        - **Dividends**: Payment Frequency, Last Payment Date, Last Amount, Annual Yield (%).
        - **Portfolio**: Top 5 Holdings (Name, %), Top 5 Sector Allocations (Name, %).
        - **Documents**: Find URLs for "Factsheet" or "Prospectus" or "Monthly Report" if available in search snippets.
+       - **Ranking**: Find the category ranking or percentile (e.g., "Top 10%", "5/102", "4 Stars").
        
     **CRITICAL: Dividend History (Last 3 Years)**
     Extract a list of dividend payments from the last 3 years (up to 36 entries).
@@ -75,6 +76,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
             changePercent: { type: Type.NUMBER, nullable: true },
             buyPrice: { type: Type.NUMBER, nullable: true },
             sellPrice: { type: Type.NUMBER, nullable: true },
+            ranking: { type: Type.STRING, nullable: true, description: "Category rank or percentile, e.g. 5/102 or Top 10%" },
             performance: {
               type: Type.OBJECT,
               nullable: true,
@@ -226,6 +228,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
       changePercent: finalChangePercent,
       buyPrice: finalBuyPrice,
       sellPrice: finalSellPrice,
+      ranking: data.ranking,
       performance: data.performance || {},
       dividendInfo: data.dividendInfo || {},
       news: data.news || [],
