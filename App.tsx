@@ -53,6 +53,15 @@ const FundExpandedContent: React.FC<{
     { id: 'documents', label: t('tabDocuments') },
   ];
 
+  const getSourceBadgeStyle = (source: string) => {
+    const s = source.toLowerCase();
+    if (s.includes('ft') || s.includes('financial times')) return 'bg-[#fff1e5] text-[#333333] border-[#e9decf]';
+    if (s.includes('bloomberg')) return 'bg-blue-600 text-white border-blue-700';
+    if (s.includes('morningstar')) return 'bg-red-600 text-white border-red-700';
+    if (s.includes('reuters')) return 'bg-orange-600 text-white border-orange-700';
+    return 'bg-slate-100 text-slate-600 border-slate-200';
+  };
+
   return (
     <div className="mt-6 pt-2 border-t border-slate-100 animate-fadeIn origin-top">
        {/* Tab Navigation */}
@@ -77,29 +86,36 @@ const FundExpandedContent: React.FC<{
           {activeTab === 'summary' && (
             <div className="space-y-6 animate-fadeIn">
               <div>
-                <h4 className="text-sm font-bold text-slate-800 mb-2">{t('strategy')}</h4>
-                <p className="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                  {fund.description || t('noDescription')}
-                </p>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-sm font-bold text-slate-800">{t('strategy')}</h4>
+                  <span className="text-[10px] text-slate-400 italic">AI Generated Summary</span>
+                </div>
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm leading-relaxed">
+                  <p className="text-sm text-slate-700 font-medium">
+                    {fund.description || t('noDescription')}
+                  </p>
+                </div>
               </div>
               
               {fund.news && fund.news.length > 0 && (
                 <div>
                    <h4 className="text-sm font-bold text-slate-800 mb-3">{t('news')}</h4>
-                   <div className="space-y-3">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {fund.news.map((item, idx) => (
                       <a 
                           key={idx} 
                           href={item.url || `https://www.google.com/search?q=${encodeURIComponent(item.title + ' ' + fund.name)}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="block group bg-white p-3 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all"
+                          className="block group bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-lg transition-all"
                       >
-                        <h5 className="text-xs font-semibold text-slate-700 group-hover:text-blue-600 line-clamp-2">{item.title}</h5>
-                        <div className="flex justify-between items-center mt-2">
-                           <span className="text-[10px] text-slate-400">{item.source}</span>
+                        <div className="flex justify-between items-start mb-2">
+                           <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${getSourceBadgeStyle(item.source)}`}>
+                              {item.source}
+                           </span>
                            <span className="text-[10px] text-slate-400 font-mono">{item.date}</span>
                         </div>
+                        <h5 className="text-xs font-bold text-slate-800 group-hover:text-blue-600 line-clamp-3 leading-snug">{item.title}</h5>
                       </a>
                     ))}
                    </div>
@@ -554,6 +570,36 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const handleShare = async (fund: Fund, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareText = t('shareText', {
+      name: fund.name,
+      isin: fund.isin,
+      price: fund.price,
+      currency: fund.currency,
+      ytd: fund.performance?.ytd || '-'
+    });
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: t('shareTitle'),
+          text: shareText,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.debug('Share cancelled or failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        showNotification('copiedToClipboard', 'success');
+      } catch (err) {
+        console.error('Clipboard failed', err);
+      }
+    }
+  };
+
   const runAnalysis = useCallback(async () => {
     if (funds.length === 0) return;
     setAnalyzing(true);
@@ -735,7 +781,7 @@ const AppContent: React.FC = () => {
                 return (
                   <div key={fund.isin} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-slate-900 border-transparent shadow-xl scale-[1.01]' : 'border-slate-100 hover:shadow-md hover:border-slate-300'}`}>
                     <div 
-                      className="p-5 cursor-pointer relative"
+                      className="p-5 cursor-pointer relative group"
                       onClick={() => toggleExpand(fund.isin)}
                     >
                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -758,6 +804,16 @@ const AppContent: React.FC = () => {
                                >
                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 20 20">
                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.038 3.192a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.038-3.192z" />
+                                 </svg>
+                               </button>
+                               {/* Share Button */}
+                               <button
+                                 onClick={(e) => handleShare(fund, e)}
+                                 className="text-slate-300 hover:text-blue-500 transition-colors"
+                                 title={t('share')}
+                               >
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                   <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
                                  </svg>
                                </button>
                              </div>

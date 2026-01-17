@@ -7,22 +7,23 @@ export const DEFAULT_FUNDS = [
 
 export const MOCK_HISTORY_DAYS = 30;
 
-// Helper to generate a simulated history based on the current price
-// We generate history backwards from today to ensure continuity
+/**
+ * Generates a simulated price history based on current price.
+ * Uses a geometric random walk backwards from today.
+ */
 export const generateMockHistory = (currentPrice: number, days: number = 30): { date: string; value: number }[] => {
   const history = [];
   let price = currentPrice;
   const now = new Date();
   
-  // Volatility adjustment based on timeframe
-  // Daily changes are usually small, but for longer periods we want realistic drift
-  const dailyVol = 0.015; // 1.5% daily volatility approximation for random walk
+  // Adjust volatility based on timeframe (longer timeframes look smoother)
+  const dailyVol = days > 365 ? 0.008 : 0.015; 
 
   for (let i = 0; i < days; i++) {
     const date = new Date();
     date.setDate(now.getDate() - (i + 1));
     
-    // Random walk step backwards: P_prev = P_curr / (1 + change) approx P_curr * (1 - change)
+    // Geometric random walk step backwards
     const changePercent = (Math.random() - 0.5) * dailyVol;
     price = price * (1 - changePercent);
     
@@ -32,7 +33,7 @@ export const generateMockHistory = (currentPrice: number, days: number = 30): { 
     });
   }
   
-  // Add today's price as the last point
+  // Ensure the latest point is exactly the current price
   history.push({
     date: now.toISOString().split('T')[0],
     value: currentPrice

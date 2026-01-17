@@ -106,7 +106,6 @@ export const translations = {
     removeConfirm: '確定要移除嗎？',
     removed: '已移除',
     
-    // New Tabs & Comparison
     tabSummary: '基金概要',
     tabPerformance: '績效',
     tabData: '基金資料',
@@ -115,7 +114,6 @@ export const translations = {
     tabPortfolio: '投資標的',
     tabDocuments: '相關文件',
     
-    // New Fields
     fundSize: '基金規模',
     launchDate: '成立日期',
     topHoldings: '前五大持股',
@@ -128,7 +126,6 @@ export const translations = {
     volatility: '年化標準差 (3年)',
     categoryRank: '同類型基金參考排名',
     
-    // Chart Ranges
     range1M: '1月',
     range3M: '3月',
     range6M: '6月',
@@ -136,6 +133,12 @@ export const translations = {
     range3Y: '3年',
     range5Y: '5年',
     rangeAll: '全部',
+
+    share: '分享',
+    shareText: '來自 FundTracker AI 的基金快訊：\n基金：{name}\nISIN: {isin}\n最新淨值：{price} {currency}\n年初至今表現：{ytd}%',
+    shareTitle: '基金詳細資訊',
+    copiedToClipboard: '已複製到剪貼簿',
+    comparisonChart: '歷史走勢比較',
   },
   'en': {
     appTitle: 'FundTracker AI',
@@ -240,7 +243,6 @@ export const translations = {
     removeConfirm: 'Are you sure?',
     removed: 'Removed',
     
-    // New Tabs & Comparison
     tabSummary: 'Summary',
     tabPerformance: 'Performance',
     tabData: 'Fund Data',
@@ -249,7 +251,6 @@ export const translations = {
     tabPortfolio: 'Portfolio',
     tabDocuments: 'Documents',
 
-    // New Fields
     fundSize: 'Fund Size',
     launchDate: 'Launch Date',
     topHoldings: 'Top Holdings',
@@ -262,7 +263,6 @@ export const translations = {
     volatility: 'Volatility (3Y)',
     categoryRank: 'Category Rank',
     
-    // Chart Ranges
     range1M: '1M',
     range3M: '3M',
     range6M: '6M',
@@ -270,6 +270,12 @@ export const translations = {
     range3Y: '3Y',
     range5Y: '5Y',
     rangeAll: 'All',
+
+    share: 'Share',
+    shareText: 'Fund Update from FundTracker AI:\nFund: {name}\nISIN: {isin}\nLatest NAV: {price} {currency}\nYTD Return: {ytd}%',
+    shareTitle: 'Fund Details',
+    copiedToClipboard: 'Copied to clipboard',
+    comparisonChart: 'Comparison History',
   }
 };
 

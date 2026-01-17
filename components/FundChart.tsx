@@ -20,7 +20,7 @@ const FundChart: React.FC<FundChartProps> = ({ currentPrice, color = "#3b82f6" }
   const { t } = useLanguage();
   const [days, setDays] = useState(30);
 
-  // Memoize the data so it doesn't regenerate on every render
+  // Memoize the data based on currentPrice and selected timeframe
   const data = useMemo(() => generateMockHistory(currentPrice, days), [currentPrice, days]);
 
   const ranges = [
@@ -34,56 +34,57 @@ const FundChart: React.FC<FundChartProps> = ({ currentPrice, color = "#3b82f6" }
   ];
 
   return (
-    <div className="flex flex-col w-full h-[300px] md:h-64 bg-slate-50/50 rounded-xl p-3 border border-slate-100">
-       <div className="flex justify-end gap-1 mb-2 overflow-x-auto no-scrollbar pb-1">
-         {ranges.map(range => (
-           <button
-             key={range.labelKey}
-             onClick={(e) => {
-               e.stopPropagation(); // Prevent card expansion toggle if inside clickable area
-               setDays(range.value);
-             }}
-             className={`px-3 py-1 text-xs font-bold rounded-full transition-all whitespace-nowrap ${
-               days === range.value 
-                 ? 'bg-slate-800 text-white shadow-md' 
-                 : 'bg-white text-slate-500 hover:bg-slate-200 border border-slate-200'
-             }`}
-           >
-             {t(range.labelKey)}
-           </button>
-         ))}
+    <div className="flex flex-col w-full h-[320px] md:h-72 bg-white rounded-3xl p-5 border border-slate-100 shadow-inner">
+       <div className="flex justify-between items-center mb-6">
+         <div className="flex flex-col">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('price')} History</span>
+            <span className="text-sm font-bold text-slate-700">{t(ranges.find(r => r.value === days)?.labelKey || 'range1M')} Range</span>
+         </div>
+         <div className="flex gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto no-scrollbar">
+           {ranges.map(range => (
+             <button
+               key={range.labelKey}
+               onClick={(e) => {
+                 e.stopPropagation();
+                 setDays(range.value);
+               }}
+               className={`px-3 py-1.5 text-[10px] font-black rounded-lg transition-all whitespace-nowrap ${
+                 days === range.value 
+                   ? 'bg-white text-blue-600 shadow-sm' 
+                   : 'text-slate-500 hover:text-slate-900'
+               }`}
+             >
+               {t(range.labelKey)}
+             </button>
+           ))}
+         </div>
        </div>
        
-       <div className="flex-1 min-h-0 w-full">
+       <div className="flex-1 w-full overflow-hidden">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
-            margin={{
-              top: 5,
-              right: 0,
-              left: 0,
-              bottom: 0,
-            }}
+            margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
           >
             <defs>
               <linearGradient id={`colorGradient-${currentPrice}-${days}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                <stop offset="0%" stopColor={color} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis 
-              dataKey="date" 
-              hide={true} 
-            />
-            <YAxis 
-              domain={['auto', 'auto']} 
-              hide={true} 
-            />
+            <CartesianGrid strokeDasharray="5 5" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="date" hide={true} />
+            <YAxis domain={['auto', 'auto']} hide={true} />
             <Tooltip 
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
-              formatter={(value: number) => [value.toFixed(4), t('price')]}
-              labelFormatter={(label) => `${t('today').replace('Today','Date')}: ${label}`}
+              contentStyle={{ 
+                borderRadius: '16px', 
+                border: '1px solid #f1f5f9', 
+                boxShadow: '0 10px 30px -5px rgba(0,0,0,0.1)', 
+                fontSize: '11px',
+                fontWeight: '700',
+                padding: '10px'
+              }}
+              formatter={(value: number) => [`${value.toFixed(4)}`, t('price')]}
             />
             <Area 
               type="monotone" 
@@ -91,8 +92,8 @@ const FundChart: React.FC<FundChartProps> = ({ currentPrice, color = "#3b82f6" }
               stroke={color} 
               fillOpacity={1} 
               fill={`url(#colorGradient-${currentPrice}-${days})`} 
-              strokeWidth={2}
-              animationDuration={500}
+              strokeWidth={3}
+              animationDuration={800}
             />
           </AreaChart>
         </ResponsiveContainer>
