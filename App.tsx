@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Fund, AppPreferences, FundPerformance } from './types';
 import { fetchFundDetails, analyzePortfolio } from './services/geminiService';
@@ -10,7 +11,8 @@ import SettingsModal from './components/SettingsModal';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 
 // Helper component for Performance Metrics
-const PerformanceMetric = ({ label, value }: { label: string; value?: number | null }) => {
+// Fix: Use React.FC to properly handle the reserved 'key' prop and ensure type safety for value property
+const PerformanceMetric: React.FC<{ label: string; value?: number | null }> = ({ label, value }) => {
   const hasValue = value !== undefined && value !== null;
   const numValue = hasValue ? Number(value) : 0;
   const isVolatility = label.includes("波幅") || label.includes("Vol");
