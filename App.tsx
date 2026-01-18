@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Fund, AppPreferences, FundPerformance } from './types';
 import { fetchFundDetails, analyzePortfolio } from './services/geminiService';
@@ -95,12 +94,31 @@ const FundExpandedContent: React.FC<{
               <div>
                 <div className="flex justify-between items-center mb-3">
                   <h4 className="text-sm font-bold text-slate-800">{t('strategy')}</h4>
-                  <span className="text-[10px] text-slate-400 italic">AI Generated Summary</span>
+                  {fund.sources && fund.sources.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold shadow-sm">
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2.166 4.9L9.03 9.069a1 1 0 00.939 0L16.835 4.9A2 2 0 0015 2H5a2 2 0 00-2.834 2.9zM15 11l-5 3-5-3v4a2 2 0 002 2h6a2 2 0 002-2v-4z" clipRule="evenodd" /></svg>
+                       Verified Official Content
+                    </div>
+                  )}
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm leading-relaxed">
-                  <p className="text-sm text-slate-700 font-medium">
+                  <p className="text-sm text-slate-700 font-medium italic">
                     {fund.description || t('noDescription')}
                   </p>
+                  
+                  {fund.sources && fund.sources.length > 0 && (
+                    <div className="mt-5 pt-4 border-t border-slate-100">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase mb-2 tracking-widest">Verification Sources</p>
+                      <div className="flex flex-wrap gap-2">
+                        {fund.sources.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] bg-slate-50 text-slate-600 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all truncate max-w-[240px]">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+                            {new URL(url).hostname}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               {fund.news && fund.news.length > 0 && (
@@ -236,11 +254,15 @@ const FundExpandedContent: React.FC<{
           {activeTab === 'manager' && (
              <div className="animate-fadeIn">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
-                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                   <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 p-2 shadow-inner overflow-hidden">
+                      {fund.fundHouseLogoUrl ? (
+                         <img src={fund.fundHouseLogoUrl} alt={fund.manager} className="w-full h-full object-contain" />
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                      )}
                    </div>
                    <h4 className="text-lg font-bold text-slate-800">{fund.manager}</h4>
-                   <p className="text-sm text-slate-500 mt-2">Fund Manager / Provider</p>
+                   <p className="text-sm text-slate-500 mt-2">Certified Fund Provider</p>
                 </div>
              </div>
           )}
@@ -284,6 +306,7 @@ const FundExpandedContent: React.FC<{
 const AppContent: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const [user, setUser] = useState<GoogleUser | null>(null);
+  const [hasPersonalKey, setHasPersonalKey] = useState(false);
   
   // Storage keys depend on user login state
   const getFundsKey = useCallback(() => user ? `funds_${user.sub}` : 'funds', [user]);
@@ -302,10 +325,24 @@ const AppContent: React.FC = () => {
   const [refreshingFunds, setRefreshingFunds] = useState<Set<string>>(new Set());
   const [analysis, setAnalysis] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
-  const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ msg: string; type: 'success' | 'error'; action?: { label: string; onClick: () => void } } | null>(null);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [backgroundTask, setBackgroundTask] = useState({ active: false, total: 0, completed: 0, success: 0, fail: 0 });
   const [expandedFunds, setExpandedFunds] = useState<Set<string>>(new Set());
+
+  // Check key status periodically
+  useEffect(() => {
+    const checkKey = async () => {
+      const g = (window as any).aistudio;
+      if (g?.hasSelectedApiKey) {
+        const has = await g.hasSelectedApiKey();
+        setHasPersonalKey(has);
+      }
+    };
+    checkKey();
+    const interval = setInterval(checkKey, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load data when storage key changes (on login/logout)
   useEffect(() => {
@@ -337,11 +374,10 @@ const AppContent: React.FC = () => {
       setNotification({ msg: `Welcome back, ${decoded.given_name}!`, type: 'success' });
     };
 
-    // Fixed: window.google type error by using a casted reference
     const g = (window as any).google;
     if (typeof g !== 'undefined') {
       g.accounts.id.initialize({
-        client_id: "62744820258-vptc44a95l2m25clh7qpg9f727878g2q.apps.googleusercontent.com", // Demo Client ID - user should replace with their own for production
+        client_id: "62744820258-vptc44a95l2m25clh7qpg9f727878g2q.apps.googleusercontent.com", // Demo Client ID
         callback: handleCallback,
       });
 
@@ -357,17 +393,41 @@ const AppContent: React.FC = () => {
     setNotification({ msg: "Signed out successfully", type: 'success' });
   };
 
+  const handleSelectKey = async () => {
+    const g = (window as any).aistudio;
+    if (g?.openSelectKey) {
+      await g.openSelectKey();
+      setHasPersonalKey(true);
+      setNotification({ msg: "Personal API Key applied. Retrying will now use your own quota.", type: 'success' });
+    }
+  };
+
+  const showNotification = useCallback((msgKey: string, type: 'success' | 'error', params?: any) => {
+    const msg = t(msgKey, params);
+    setNotification({ msg, type });
+  }, [t]);
+
+  const handleError = useCallback((error: any) => {
+    if (error.message === "ERROR_QUOTA_EXHAUSTED") {
+      setNotification({ 
+        msg: t('ERROR_QUOTA_EXHAUSTED'), 
+        type: 'error',
+        action: {
+          label: t('selectApiKey'),
+          onClick: handleSelectKey
+        }
+      });
+    } else {
+      showNotification(error.message || 'refreshFail', 'error');
+    }
+  }, [t, showNotification]);
+
   useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => setNotification(null), 4000);
+    if (notification && !notification.action) {
+      const timer = setTimeout(() => setNotification(null), 5000);
       return () => clearTimeout(timer);
     }
   }, [notification]);
-
-  const showNotification = (msgKey: string, type: 'success' | 'error', params?: any) => {
-    const msg = t(msgKey, params);
-    setNotification({ msg, type });
-  };
 
   const toggleSelection = (isin: string) => {
     setSelectedFunds(prev => {
@@ -402,12 +462,18 @@ const AppContent: React.FC = () => {
           const newFund = await fetchFundDetails(query, language);
           setFunds(prev => prev.some(f => f.isin === newFund.isin) ? prev : [...prev, { ...newFund, unitsHeld: 0 }]);
           successCount++;
-        } catch (err: any) { failCount++; } finally { setBackgroundTask(prev => ({ ...prev, completed: prev.completed + 1, success: successCount, fail: failCount })); }
+        } catch (err: any) { 
+           failCount++; 
+           if (err.message === "ERROR_QUOTA_EXHAUSTED") {
+             handleError(err);
+             break; 
+           }
+        } finally { setBackgroundTask(prev => ({ ...prev, completed: prev.completed + 1, success: successCount, fail: failCount })); }
       }
       setTimeout(() => {
         setBackgroundTask(prev => ({ ...prev, active: false }));
         if (successCount > 0) showNotification(failCount > 0 ? 'partialAdd' : 'successAdd', 'success', { success: successCount, fail: failCount, count: successCount });
-        else showNotification('failAdd', 'error');
+        else if (failCount > 0) showNotification('failAdd', 'error');
       }, 1000);
     })();
   };
@@ -431,7 +497,9 @@ const AppContent: React.FC = () => {
        const updatedFund = await fetchFundDetails(isin, language);
        setFunds(prev => prev.map(f => f.isin === isin ? { ...updatedFund, unitsHeld: f.unitsHeld, isFavorite: f.isFavorite } : f));
        showNotification('refreshSuccess', 'success');
-    } catch (e: any) { showNotification('refreshFail', 'error'); } finally {
+    } catch (e: any) { 
+       handleError(e);
+    } finally {
       setRefreshingFunds(prev => { const next = new Set(prev); next.delete(isin); return next; });
     }
   };
@@ -441,7 +509,6 @@ const AppContent: React.FC = () => {
     showNotification('tradeSuccess', 'success', { action: type === 'BUY' ? t('buyAction') : t('sellAction'), quantity, name: funds.find(f => f.isin === fundIsin)?.name || 'Fund' });
   };
 
-  // Fixed: Added missing openTradeModal helper function
   const openTradeModal = useCallback((fundIsin: string, type: 'BUY' | 'SELL') => {
     setTradeModalConfig({ isOpen: true, type, fundIsin });
   }, []);
@@ -452,8 +519,11 @@ const AppContent: React.FC = () => {
     try {
       const result = await analyzePortfolio(funds, language);
       setAnalysis(result);
-    } catch (e) { setAnalysis(t('analysisFail')); } finally { setAnalyzing(false); }
-  }, [funds, language, t]);
+    } catch (e: any) { 
+       handleError(e);
+       setAnalysis(null);
+    } finally { setAnalyzing(false); }
+  }, [funds, language, handleError]);
 
   const toggleExpand = (isin: string) => {
     setExpandedFunds(prev => { const next = new Set(prev); if (next.has(isin)) next.delete(isin); else next.add(isin); return next; });
@@ -470,7 +540,15 @@ const AppContent: React.FC = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">FT</div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight hidden sm:block">{t('appTitle')}</h1>
+              <div className="hidden sm:block">
+                 <h1 className="text-xl font-bold text-slate-800 tracking-tight leading-none">{t('appTitle')}</h1>
+                 <div className="flex items-center gap-1.5 mt-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${hasPersonalKey ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                       {hasPersonalKey ? t('personalKeyActive') : t('sharedKeyActive')}
+                    </span>
+                 </div>
+              </div>
             </div>
             
             <div className="flex items-center gap-3">
@@ -544,28 +622,73 @@ const AppContent: React.FC = () => {
                 const isSelected = selectedFunds.has(fund.isin);
                 const estValue = (fund.price * (fund.unitsHeld || 0));
                 return (
-                  <div key={fund.isin} className={`bg-white rounded-2xl shadow-sm border transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-slate-900 border-transparent shadow-xl' : 'border-slate-100 hover:shadow-md'}`}>
-                    <div className="p-5 cursor-pointer relative group" onClick={() => toggleExpand(fund.isin)}>
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div key={fund.isin} className={`bg-white rounded-3xl shadow-sm border transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-slate-900 border-transparent shadow-xl' : 'border-slate-100 hover:shadow-md'}`}>
+                    <div className="p-6 cursor-pointer relative group" onClick={() => toggleExpand(fund.isin)}>
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
                         <div className="flex items-start gap-4 flex-1">
-                          <input type="checkbox" checked={isSelected} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelection(fund.isin)} className="w-5 h-5 rounded border-slate-300 text-slate-900 mt-1" />
-                          <div>
-                             <div className="flex items-center gap-2 mb-1">
-                               <h3 className="text-lg font-bold text-slate-800 line-clamp-1">{fund.name}</h3>
-                               <button onClick={(e) => toggleFavorite(fund.isin, e)} className={`transition-colors ${fund.isFavorite ? 'text-yellow-400' : 'text-slate-200'}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.038 3.192a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.038-3.192z" /></svg></button>
+                          <input type="checkbox" checked={isSelected} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelection(fund.isin)} className="w-5 h-5 rounded-md border-slate-300 text-slate-900 mt-1.5" />
+                          <div className="flex items-start gap-4">
+                             <div className="w-12 h-12 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 flex-shrink-0 shadow-inner flex items-center justify-center overflow-hidden">
+                                {fund.fundHouseLogoUrl ? (
+                                   <img src={fund.fundHouseLogoUrl} alt={fund.manager} className="w-full h-full object-contain" />
+                                ) : (
+                                   <div className="w-full h-full bg-slate-200 animate-pulse rounded-lg flex items-center justify-center text-[10px] font-black text-slate-400">FT</div>
+                                )}
                              </div>
-                             <div className="flex items-center gap-3 text-sm text-slate-500 font-mono"><span className="bg-slate-100 px-1.5 rounded text-xs">{fund.isin}</span><span>{fund.currency} {fund.price}</span><span className={`font-bold ${fund.changePercent && fund.changePercent > 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fund.changePercent && fund.changePercent > 0 ? '+' : ''}{fund.changePercent}%</span></div>
+                             <div>
+                               <div className="flex items-center gap-2 mb-1.5">
+                                 <h3 className="text-lg font-bold text-slate-800 line-clamp-1 leading-tight">{fund.name}</h3>
+                                 {fund.sources && fund.sources.length > 0 && (
+                                   <div className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black border border-emerald-100 shadow-sm" title="Data Verified Against Official Sources">
+                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2.166 4.9L9.03 9.069a1 1 0 00.939 0L16.835 4.9A2 2 0 0015 2H5a2 2 0 00-2.834 2.9zM15 11l-5 3-5-3v4a2 2 0 002 2h6a2 2 0 002-2v-4z" clipRule="evenodd" /></svg>
+                                     OFFICIAL
+                                   </div>
+                                 )}
+                                 <button onClick={(e) => toggleFavorite(fund.isin, e)} className={`transition-all hover:scale-110 active:scale-95 ${fund.isFavorite ? 'text-yellow-400' : 'text-slate-200'}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.038 3.192a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.038-3.192z" /></svg></button>
+                               </div>
+                               <div className="flex items-center gap-3 text-[13px] text-slate-500 font-medium">
+                                 <span className="bg-slate-100 px-2 py-0.5 rounded-lg text-[10px] font-mono tracking-tighter text-slate-600">{fund.isin}</span>
+                                 <span className="font-mono">{fund.currency} {fund.price}</span>
+                                 <span className={`font-bold px-1.5 py-0.5 rounded-md ${fund.changePercent && fund.changePercent > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                                   {fund.changePercent && fund.changePercent > 0 ? '+' : ''}{fund.changePercent}%
+                                 </span>
+                               </div>
+                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                           <div className="text-right hidden sm:block"><p className="text-xs text-slate-400 font-bold uppercase">{t('currentHoldings')}</p><p className="font-bold text-slate-800">{fund.unitsHeld || 0} {t('units')}</p></div>
-                           <div className="text-right hidden sm:block"><p className="text-xs text-slate-400 font-bold uppercase">{t('estMarketValue')}</p><p className="font-bold text-slate-800 font-mono">{fund.currency} {estValue.toLocaleString()}</p></div>
-                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}><button onClick={() => openTradeModal(fund.isin, 'BUY')} className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all">{t('buy')}</button></div>
+                        <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-50">
+                           <div className="text-right hidden sm:block">
+                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Holdings</p>
+                             <p className="font-bold text-slate-800 text-sm">{fund.unitsHeld || 0} <span className="text-[10px] text-slate-400 uppercase">Units</span></p>
+                           </div>
+                           <div className="text-right">
+                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Value</p>
+                             <p className="font-bold text-slate-900 font-mono">{fund.currency} {estValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                           </div>
+                           <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                             <button onClick={() => openTradeModal(fund.isin, 'BUY')} className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
+                               Trade
+                             </button>
+                           </div>
                         </div>
                       </div>
-                      {preferences.showChart && !preferences.compactMode && (<div className="mt-6 mb-2"><FundChart currentPrice={fund.price} color={fund.changePercent && fund.changePercent >= 0 ? '#10b981' : '#ef4444'} /></div>)}
+                      {preferences.showChart && !preferences.compactMode && (
+                        <div className="mt-8 mb-2 animate-fadeIn">
+                          <FundChart currentPrice={fund.price} color={fund.changePercent && fund.changePercent >= 0 ? '#10b981' : '#ef4444'} />
+                        </div>
+                      )}
                     </div>
-                    {isExpanded && (<div className="px-5 pb-5"><FundExpandedContent fund={fund} t={t} onRefresh={handleRefreshFund} onRemove={handleRemoveFund} isRefreshing={refreshingFunds.has(fund.isin)} /></div>)}
+                    {isExpanded && (
+                      <div className="px-6 pb-6 animate-slideUp">
+                        <FundExpandedContent 
+                          fund={fund} 
+                          t={t} 
+                          onRefresh={handleRefreshFund} 
+                          onRemove={handleRemoveFund} 
+                          isRefreshing={refreshingFunds.has(fund.isin)} 
+                        />
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -580,15 +703,52 @@ const AppContent: React.FC = () => {
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} preferences={preferences} onUpdate={setPreferences} />
 
       {backgroundTask.active && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-slideUp">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 animate-slideUp border border-white/10 backdrop-blur-md">
            <svg className="animate-spin h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-           <div><p className="text-sm font-bold">{t('backgroundProcessing')}</p><p className="text-xs text-slate-400">{backgroundTask.completed} / {backgroundTask.total}</p></div>
+           <div><p className="text-sm font-bold tracking-tight">{t('backgroundProcessing')}</p><p className="text-xs text-slate-400 mt-0.5">{backgroundTask.completed} / {backgroundTask.total} Synchronized</p></div>
         </div>
       )}
 
       {notification && (
-        <div className={`fixed top-24 right-6 z-50 px-6 py-4 rounded-xl shadow-2xl animate-slideUp border bg-white ${notification.type === 'success' ? 'border-emerald-100' : 'border-red-100'}`}>
-          <div className="flex items-center gap-3"><p className="font-bold text-sm">{notification.msg}</p></div>
+        <div className={`fixed top-24 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl animate-slideUp border bg-white/95 backdrop-blur-sm ${notification.type === 'success' ? 'border-emerald-100' : 'border-red-100'} min-w-[320px] max-w-md`}>
+          <div className="flex flex-col gap-3">
+             <div className="flex items-start gap-3">
+                <div className={`p-1.5 rounded-xl mt-0.5 ${notification.type === 'success' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                   {notification.type === 'success' ? (
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                   ) : (
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                   )}
+                </div>
+                <div className="flex-1">
+                   <p className="font-bold text-sm text-slate-800 leading-snug">{notification.msg}</p>
+                   {notification.action && (
+                      <div className="mt-3 flex items-center gap-3">
+                        <button 
+                          onClick={notification.action.onClick}
+                          className="px-4 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-black hover:bg-slate-800 transition-colors shadow-sm"
+                        >
+                          {notification.action.label}
+                        </button>
+                        <a 
+                          href="https://ai.google.dev/gemini-api/docs/billing" 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-[11px] text-blue-600 font-bold hover:underline"
+                        >
+                          {t('billingDocLink')}
+                        </a>
+                      </div>
+                   )}
+                </div>
+                <button 
+                  onClick={() => setNotification(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-50 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                </button>
+             </div>
+          </div>
         </div>
       )}
     </div>

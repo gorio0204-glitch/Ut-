@@ -1,16 +1,25 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { Fund } from "../types";
 
-// Always initialize with process.env.API_KEY as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper to initialize AI. We create a new instance inside service calls if needed 
+// to ensure we use the latest injected API_KEY if a user has selected a personal one.
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Retry helper function
+// Retry helper function with specific handling for status codes
 async function retry<T>(fn: () => Promise<T>, retries = 2, delay = 1000): Promise<T> {
   try {
     return await fn();
   } catch (error: any) {
+    const errorMsg = error.message || "";
+    const status = error.status || (error.error && error.error.code);
+    
+    if (status === 429 || errorMsg.includes("RESOURCE_EXHAUSTED")) {
+      console.error("Gemini API Quota Exhausted (429)");
+      throw new Error("ERROR_QUOTA_EXHAUSTED");
+    }
+
     if (retries <= 0) throw error;
-    console.warn(`API call failed, retrying... (${retries} attempts left). Error: ${error.message}`);
+    console.warn(`API call failed, retrying... (${retries} attempts left). Error: ${errorMsg}`);
     await new Promise(resolve => setTimeout(resolve, delay));
     return retry(fn, retries - 1, delay * 2);
   }
@@ -21,27 +30,29 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
     throw new Error("ERROR_API_KEY");
   }
 
+  const ai = getAI();
   const model = "gemini-3-flash-preview";
   const promptLang = lang === 'zh-TW' ? 'Traditional Chinese (繁體中文)' : 'English';
   
   const prompt = `
-    Role: Senior Financial Analyst & Data Scraper.
-    Task: Find the official data for the fund matching: "${query}".
+    Role: Senior Financial Data Auditor & Verification Expert.
+    Task: Retrieve and strictly FACT-CHECK the official data for the fund matching: "${query}".
     
-    Data Source Priorities:
-    - Official Fund Manager websites (BlackRock, Allianz, Vanguard, etc.)
-    - Financial terminals: Bloomberg, Financial Times (ft.com), Morningstar, Reuters, Yahoo Finance, Google Finance.
-    - Regional regulators: SFC, SEC, etc.
+    VERIFICATION PROTOCOL:
+    1. Identify the official Fund House/Manager (e.g., BlackRock, Allianz, J.P. Morgan, Schroders, Fidelity).
+    2. ONCE IDENTIFIED, you MUST perform a targeted search specifically on the official Fund House regional website (e.g., blackrock.com/hk, allianzgi.com, etc.).
+    3. FACT-CHECK cross-reference: Compare data from search results (Morningstar, Bloomberg) against the identified Fund House official page. 
+    4. DATA PRIORITY: You MUST prioritize the Fund House's official website data (NAV, ISIN, Holdings) over third-party data if a discrepancy exists.
+    5. LOGO FETCHING: Find the official brand logo URL (SVG or PNG) from the Fund House's corporate identity page or favicon.
 
     Instructions:
-    1. Resolve typos and fuzzy names to the correct official fund name and ISIN.
-    2. Extract latest NAV price and currency.
-    3. Performance: Extract returns for YTD, 1m, 3m, 6m, 1y, 3y, 5y and 3y Volatility.
-    4. Dividends: Extract the most recent history from the last 3 years.
-    5. **RANKING**: Specifically find the "Category Ranking" or "Peer Percentile".
-    6. **DESCRIPTION**: Provide a concise summary (approx. 100 words) of the fund's investment objective and strategy. Focus on what it invests in and its risk profile.
-    7. **NEWS**: Find the latest 4 news items. PRIORITIZE: Financial Times (ft.com), Bloomberg, and Morningstar. Use real URLs if possible.
-    8. Portfolio: Find top holdings and sector allocation.
+    - Return the correct official fund name and ISIN.
+    - Extract latest NAV price and currency.
+    - Performance: Extract returns for YTD, 1m, 3m, 6m, 1y, 3y, 5y and 3y Volatility.
+    - Dividends: Extract the most recent history from the last 3 years.
+    - DESCRIPTION: Provide a concise summary (approx. 100 words) of the strategy.
+    - NEWS: Find the latest 4 news items from Bloomberg, FT, or Morningstar.
+    - OFFICIAL URL: Provide the specific URL used for fact-checking.
 
     Output Language: ${promptLang}
     Output Format: JSON only.
@@ -62,6 +73,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
             price: { type: Type.NUMBER, nullable: true },
             currency: { type: Type.STRING, nullable: true },
             manager: { type: Type.STRING, nullable: true },
+            fundHouseLogoUrl: { type: Type.STRING, nullable: true, description: "Direct URL to the fund house's official logo." },
             fundSize: { type: Type.STRING, nullable: true },
             description: { type: Type.STRING, nullable: true },
             domicile: { type: Type.STRING, nullable: true },
@@ -69,6 +81,7 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
             riskRating: { type: Type.NUMBER, nullable: true },
             ranking: { type: Type.STRING, nullable: true },
             changePercent: { type: Type.NUMBER, nullable: true },
+            officialFactCheckUrl: { type: Type.STRING, nullable: true },
             performance: {
               type: Type.OBJECT,
               properties: {
@@ -140,12 +153,20 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
     const data = JSON.parse(text);
     if (!data.name || !data.price) throw new Error("ERROR_NOT_FOUND");
 
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    const searchUrls = groundingChunks
+      .map(chunk => chunk.web?.uri)
+      .filter((uri): uri is string => !!uri);
+
+    const sources = [...new Set([...(data.officialFactCheckUrl ? [data.officialFactCheckUrl] : []), ...searchUrls])];
+
     return {
       isin: (data.isin || query).toUpperCase(),
       name: data.name,
       price: data.price,
       currency: data.currency || "USD",
       manager: data.manager || "N/A",
+      fundHouseLogoUrl: data.fundHouseLogoUrl || undefined,
       description: data.description || "",
       domicile: data.domicile || "",
       launchDate: data.launchDate || "",
@@ -159,7 +180,8 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
       fundSize: data.fundSize || "-",
       topHoldings: data.topHoldings || [],
       sectorAllocation: data.sectorAllocation || [],
-      documents: []
+      documents: data.officialFactCheckUrl ? [{ title: "Official Fund Factsheet", url: data.officialFactCheckUrl }] : [],
+      sources: sources
     };
   } catch (error: any) {
     console.error(error);
@@ -167,9 +189,47 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
   }
 };
 
+export const getFundSuggestions = async (query: string): Promise<{name: string, isin: string}[]> => {
+  if (!process.env.API_KEY || query.length < 2) return [];
+  const ai = getAI();
+  const prompt = `Quickly suggest 5 real investment funds matching "${query}". Include their full names and ISIN codes. Prioritize popular ETFs and mutual funds. Format: JSON array of objects with "name" and "isin".`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              isin: { type: Type.STRING }
+            }
+          }
+        }
+      }
+    });
+    
+    return JSON.parse(response.text || "[]");
+  } catch (error) {
+    console.error("Suggestions failed:", error);
+    return [];
+  }
+};
+
 export const analyzePortfolio = async (funds: Fund[], lang: 'zh-TW' | 'en' = 'zh-TW'): Promise<string> => {
   if (!process.env.API_KEY || funds.length === 0) return "";
-  const prompt = `Briefly analyze this fund portfolio in ${lang === 'zh-TW' ? '繁體中文' : 'English'}: ${funds.map(f => f.name).join(', ')}. Under 150 words.`;
-  const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt });
-  return response.text || "";
+  const ai = getAI();
+  const prompt = `Briefly analyze this fund portfolio in ${lang === 'zh-TW' ? '繁體中文' : 'English'}: ${funds.map(f => f.name).join(', ')}. Focus on risk and overlaps. Under 150 words.`;
+  
+  try {
+    const response: GenerateContentResponse = await retry(() => ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt }));
+    return response.text || "";
+  } catch (error: any) {
+    if (error.message === "ERROR_QUOTA_EXHAUSTED") throw error;
+    return "";
+  }
 };

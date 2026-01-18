@@ -70,12 +70,12 @@ export interface Fund {
   performance?: FundPerformance;
   dividendInfo?: DividendInfo;
   isFavorite?: boolean;
-  // New Fields
   fundSize?: string;
   topHoldings?: Holding[];
   sectorAllocation?: Sector[];
   documents?: Document[];
-  ranking?: string; // e.g. "Top 10%", "5/102"
+  ranking?: string;
+  fundHouseLogoUrl?: string; // New Field for Logo
 }
 
 export interface FundHistoryPoint {

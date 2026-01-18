@@ -24,6 +24,10 @@ export const translations = {
     noFundsDesc: '點擊右上角「新增基金」開始建立您的投資組合。',
     today: '今日',
     ERROR_NOT_FOUND: '找不到基金資訊',
+    ERROR_QUOTA_EXHAUSTED: 'API 額度已用盡。請稍後再試，或點擊下方按鈕使用您自己的 API 金鑰以獲得更高額度。',
+    ERROR_API_KEY: '無效的 API 金鑰',
+    selectApiKey: '使用個人 API 金鑰',
+    billingDocLink: '查看帳單文件',
     performance: '績效表現',
     ytd: '年初至今',
     month1: '1個月',
@@ -112,6 +116,7 @@ export const translations = {
     tabManager: '基金經理人',
     tabDividends: '配息紀錄',
     tabPortfolio: '投資標的',
+    tabPortfolio_en: 'Portfolio',
     tabDocuments: '相關文件',
     
     fundSize: '基金規模',
@@ -139,6 +144,8 @@ export const translations = {
     shareTitle: '基金詳細資訊',
     copiedToClipboard: '已複製到剪貼簿',
     comparisonChart: '歷史走勢比較',
+    personalKeyActive: '個人 API 金鑰已啟用',
+    sharedKeyActive: '共用金鑰模式',
   },
   'en': {
     appTitle: 'FundTracker AI',
@@ -161,6 +168,10 @@ export const translations = {
     noFundsDesc: 'Click "Add Fund" to start building your portfolio.',
     today: 'Today',
     ERROR_NOT_FOUND: 'Fund Not Found',
+    ERROR_QUOTA_EXHAUSTED: 'API quota exhausted. Please try again later, or click the button below to use your own API key for higher limits.',
+    ERROR_API_KEY: 'Invalid API Key',
+    selectApiKey: 'Use Personal API Key',
+    billingDocLink: 'View Billing Docs',
     performance: 'Performance',
     ytd: 'YTD',
     month1: '1M',
@@ -276,6 +287,8 @@ export const translations = {
     shareTitle: 'Fund Details',
     copiedToClipboard: 'Copied to clipboard',
     comparisonChart: 'Comparison History',
+    personalKeyActive: 'Personal API Key Active',
+    sharedKeyActive: 'Shared Key Mode',
   }
 };
 
