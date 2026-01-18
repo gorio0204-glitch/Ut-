@@ -254,13 +254,6 @@ const FundExpandedContent: React.FC<{
           {activeTab === 'manager' && (
              <div className="animate-fadeIn">
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 text-center">
-                   <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 p-2 shadow-inner overflow-hidden">
-                      {fund.fundHouseLogoUrl ? (
-                         <img src={fund.fundHouseLogoUrl} alt={fund.manager} className="w-full h-full object-contain" />
-                      ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-300" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                      )}
-                   </div>
                    <h4 className="text-lg font-bold text-slate-800">{fund.manager}</h4>
                    <p className="text-sm text-slate-500 mt-2">Certified Fund Provider</p>
                 </div>
@@ -297,8 +290,35 @@ const FundExpandedContent: React.FC<{
                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               ) : t('refresh')}
           </button>
-           <button onClick={() => onRemove(fund.isin)} disabled={isRefreshing} className="flex-1 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm">{t('remove')}</button>
+           <button 
+             onClick={(e) => {
+               e.preventDefault();
+               e.stopPropagation();
+               onRemove(fund.isin);
+             }} 
+             disabled={isRefreshing} 
+             className="flex-1 bg-white border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 text-slate-700 py-3 rounded-xl text-sm font-bold transition-colors shadow-sm"
+           >
+             {t('remove')}
+           </button>
         </div>
+    </div>
+  );
+};
+
+const ConfirmationModal: React.FC<{ isOpen: boolean; title: string; message: string; onConfirm: () => void; onClose: () => void; t: (k: string) => string }> = ({ isOpen, title, message, onConfirm, onClose, t }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity animate-fadeIn" onClick={onClose}></div>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative z-10 animate-scaleIn">
+        <h3 className="text-xl font-bold text-slate-800 mb-2">{title}</h3>
+        <p className="text-slate-500 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onClose} className="flex-1 py-2.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-bold text-sm transition-colors">{t('cancel')}</button>
+          <button onClick={onConfirm} className="flex-1 py-2.5 text-white bg-red-500 hover:bg-red-600 rounded-xl font-bold text-sm transition-colors shadow-lg shadow-red-500/20">{t('remove')}</button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -329,6 +349,9 @@ const AppContent: React.FC = () => {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [backgroundTask, setBackgroundTask] = useState({ active: false, total: 0, completed: 0, success: 0, fail: 0 });
   const [expandedFunds, setExpandedFunds] = useState<Set<string>>(new Set());
+  
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; title: string; message: string; onConfirm: () => void } | null>(null);
 
   // Check key status periodically
   useEffect(() => {
@@ -432,17 +455,30 @@ const AppContent: React.FC = () => {
   const toggleSelection = (isin: string) => {
     setSelectedFunds(prev => {
       const next = new Set(prev);
-      if (next.has(isin)) next.delete(isin); else next.add(isin);
+      if (next.has(isin)) {
+        next.delete(isin);
+        if (next.size > 0 && next.size < 2) showNotification('selected', 'success', { count: next.size }); // Optional feedback
+      } else {
+        next.add(isin);
+        showNotification('selected', 'success', { count: next.size });
+      }
       return next;
     });
   };
 
   const handleBatchRemove = () => {
-    if (window.confirm(t('removeConfirm'))) {
-      setFunds(prev => prev.filter(f => !selectedFunds.has(f.isin)));
-      setSelectedFunds(new Set());
-      showNotification('removed', 'success');
-    }
+    if (selectedFunds.size === 0) return;
+    setConfirmModal({
+      isOpen: true,
+      title: t('batchRemove'),
+      message: t('removeConfirm'),
+      onConfirm: () => {
+        setFunds(prev => prev.filter(f => !selectedFunds.has(f.isin)));
+        setSelectedFunds(new Set());
+        showNotification('removed', 'success');
+        setConfirmModal(null);
+      }
+    });
   };
 
   const handleBatchCompare = () => {
@@ -479,10 +515,16 @@ const AppContent: React.FC = () => {
   };
 
   const handleRemoveFund = (isin: string) => {
-    if (window.confirm(t('removeConfirm'))) {
-      setFunds(prev => prev.filter(f => f.isin !== isin));
-      showNotification('removed', 'success');
-    }
+    setConfirmModal({
+      isOpen: true,
+      title: t('remove'),
+      message: t('removeConfirm'),
+      onConfirm: () => {
+        setFunds(prev => prev.filter(f => f.isin !== isin));
+        showNotification('removed', 'success');
+        setConfirmModal(null);
+      }
+    });
   };
 
   const toggleFavorite = (isin: string, e: React.MouseEvent) => {
@@ -625,26 +667,18 @@ const AppContent: React.FC = () => {
                   <div key={fund.isin} className={`bg-white rounded-3xl shadow-sm border transition-all duration-300 overflow-hidden ${isExpanded ? 'ring-2 ring-slate-900 border-transparent shadow-xl' : 'border-slate-100 hover:shadow-md'}`}>
                     <div className="p-6 cursor-pointer relative group" onClick={() => toggleExpand(fund.isin)}>
                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
-                        <div className="flex items-start gap-4 flex-1">
+                        <div className="flex items-start gap-3 flex-1">
                           <input type="checkbox" checked={isSelected} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelection(fund.isin)} className="w-5 h-5 rounded-md border-slate-300 text-slate-900 mt-1.5" />
-                          <div className="flex items-start gap-4">
-                             <div className="w-12 h-12 rounded-2xl border border-slate-100 bg-slate-50 p-1.5 flex-shrink-0 shadow-inner flex items-center justify-center overflow-hidden">
-                                {fund.fundHouseLogoUrl ? (
-                                   <img src={fund.fundHouseLogoUrl} alt={fund.manager} className="w-full h-full object-contain" />
-                                ) : (
-                                   <div className="w-full h-full bg-slate-200 animate-pulse rounded-lg flex items-center justify-center text-[10px] font-black text-slate-400">FT</div>
-                                )}
-                             </div>
-                             <div>
-                               <div className="flex items-center gap-2 mb-1.5">
-                                 <h3 className="text-lg font-bold text-slate-800 line-clamp-1 leading-tight">{fund.name}</h3>
+                          <div className="flex-1 min-w-0">
+                               <div className="flex items-start gap-2 mb-1.5">
+                                 <h3 className="text-base sm:text-lg font-bold text-slate-800 leading-snug break-words">{fund.name}</h3>
                                  {fund.sources && fund.sources.length > 0 && (
-                                   <div className="flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black border border-emerald-100 shadow-sm" title="Data Verified Against Official Sources">
+                                   <div className="flex-shrink-0 flex items-center gap-1 px-2.5 py-0.5 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-black border border-emerald-100 shadow-sm mt-0.5" title="Data Verified Against Official Sources">
                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M2.166 4.9L9.03 9.069a1 1 0 00.939 0L16.835 4.9A2 2 0 0015 2H5a2 2 0 00-2.834 2.9zM15 11l-5 3-5-3v4a2 2 0 002 2h6a2 2 0 002-2v-4z" clipRule="evenodd" /></svg>
                                      OFFICIAL
                                    </div>
                                  )}
-                                 <button onClick={(e) => toggleFavorite(fund.isin, e)} className={`transition-all hover:scale-110 active:scale-95 ${fund.isFavorite ? 'text-yellow-400' : 'text-slate-200'}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.038 3.192a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.038-3.192z" /></svg></button>
+                                 <button onClick={(e) => toggleFavorite(fund.isin, e)} className={`transition-all hover:scale-110 active:scale-95 flex-shrink-0 ${fund.isFavorite ? 'text-yellow-400' : 'text-slate-200'}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 fill-current" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.038 3.192a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.038-3.192z" /></svg></button>
                                </div>
                                <div className="flex items-center gap-3 text-[13px] text-slate-500 font-medium">
                                  <span className="bg-slate-100 px-2 py-0.5 rounded-lg text-[10px] font-mono tracking-tighter text-slate-600">{fund.isin}</span>
@@ -653,7 +687,6 @@ const AppContent: React.FC = () => {
                                    {fund.changePercent && fund.changePercent > 0 ? '+' : ''}{fund.changePercent}%
                                  </span>
                                </div>
-                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0 border-slate-50">
@@ -666,6 +699,9 @@ const AppContent: React.FC = () => {
                              <p className="font-bold text-slate-900 font-mono">{fund.currency} {estValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                            </div>
                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                             <button onClick={() => toggleSelection(fund.isin)} className={`px-4 py-2 rounded-xl text-sm font-bold shadow-md active:scale-95 transition-all border ${isSelected ? 'bg-blue-50 text-blue-600 border-blue-200' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                               Compare
+                             </button>
                              <button onClick={() => openTradeModal(fund.isin, 'BUY')} className="px-5 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all">
                                Trade
                              </button>
@@ -701,6 +737,7 @@ const AppContent: React.FC = () => {
       <TradeModal isOpen={tradeModalConfig.isOpen} onClose={() => setTradeModalConfig(prev => ({ ...prev, isOpen: false }))} type={tradeModalConfig.type} fund={funds.find(f => f.isin === tradeModalConfig.fundIsin) || null} onConfirm={handleTradeConfirm} />
       <ComparisonModal isOpen={isCompareOpen} onClose={() => setIsCompareOpen(false)} funds={funds.filter(f => selectedFunds.has(f.isin))} />
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} preferences={preferences} onUpdate={setPreferences} />
+      <ConfirmationModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (() => {})} onClose={() => setConfirmModal(null)} t={t} />
 
       {backgroundTask.active && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 animate-slideUp border border-white/10 backdrop-blur-md">

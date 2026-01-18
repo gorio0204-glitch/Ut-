@@ -39,11 +39,12 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
     Task: Retrieve and strictly FACT-CHECK the official data for the fund matching: "${query}".
     
     VERIFICATION PROTOCOL:
-    1. Identify the official Fund House/Manager (e.g., BlackRock, Allianz, J.P. Morgan, Schroders, Fidelity).
-    2. ONCE IDENTIFIED, you MUST perform a targeted search specifically on the official Fund House regional website (e.g., blackrock.com/hk, allianzgi.com, etc.).
-    3. FACT-CHECK cross-reference: Compare data from search results (Morningstar, Bloomberg) against the identified Fund House official page. 
-    4. DATA PRIORITY: You MUST prioritize the Fund House's official website data (NAV, ISIN, Holdings) over third-party data if a discrepancy exists.
-    5. LOGO FETCHING: Find the official brand logo URL (SVG or PNG) from the Fund House's corporate identity page or favicon.
+    1. ISIN PRIORITY: If the input "${query}" is an ISIN (e.g., starts with LU, IE, US, HK), you MUST return the EXACT registered name for that ISIN. Do not use a generic or similar fund name.
+       - Example: LU2439728762 MUST be identified as "Fidelity Funds - Global Dividend Fund" (or local equivalent like "富達基金-環球股息優勢基金").
+    2. Identify the official Fund House/Manager (e.g., BlackRock, Allianz, J.P. Morgan, Schroders, Fidelity).
+    3. ONCE IDENTIFIED, you MUST perform a targeted search specifically on the official Fund House regional website (e.g., blackrock.com/hk, fidelity.com.hk, allianzgi.com).
+    4. FACT-CHECK cross-reference: Compare data from search results (Morningstar, Bloomberg) against the identified Fund House official page. 
+    5. DATA PRIORITY: You MUST prioritize the Fund House's official website data (NAV, ISIN, Holdings) over third-party data if a discrepancy exists.
 
     Instructions:
     - Return the correct official fund name and ISIN.
@@ -73,7 +74,6 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
             price: { type: Type.NUMBER, nullable: true },
             currency: { type: Type.STRING, nullable: true },
             manager: { type: Type.STRING, nullable: true },
-            fundHouseLogoUrl: { type: Type.STRING, nullable: true, description: "Direct URL to the fund house's official logo." },
             fundSize: { type: Type.STRING, nullable: true },
             description: { type: Type.STRING, nullable: true },
             domicile: { type: Type.STRING, nullable: true },
@@ -166,7 +166,6 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
       price: data.price,
       currency: data.currency || "USD",
       manager: data.manager || "N/A",
-      fundHouseLogoUrl: data.fundHouseLogoUrl || undefined,
       description: data.description || "",
       domicile: data.domicile || "",
       launchDate: data.launchDate || "",
@@ -192,7 +191,18 @@ export const fetchFundDetails = async (query: string, lang: 'zh-TW' | 'en' = 'zh
 export const getFundSuggestions = async (query: string): Promise<{name: string, isin: string}[]> => {
   if (!process.env.API_KEY || query.length < 2) return [];
   const ai = getAI();
-  const prompt = `Quickly suggest 5 real investment funds matching "${query}". Include their full names and ISIN codes. Prioritize popular ETFs and mutual funds. Format: JSON array of objects with "name" and "isin".`;
+  
+  // Enhanced prompt for fuzzy matching
+  const prompt = `
+    Task: Suggest 5 investment funds based on the partial or fuzzy input "${query}".
+    
+    Guidelines:
+    - Handle typos and partial names (e.g., "Blckrck" -> "BlackRock", "Alianz" -> "Allianz").
+    - If the input is an ISIN fragment, match it.
+    - If the input is a concept (e.g., "US Tech"), suggest popular funds in that category.
+    - Return a JSON array of objects with "name" and "isin".
+    - Prioritize widely recognized funds available globally or in Asia/US.
+  `;
 
   try {
     const response = await ai.models.generateContent({

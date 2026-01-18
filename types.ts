@@ -75,7 +75,6 @@ export interface Fund {
   sectorAllocation?: Sector[];
   documents?: Document[];
   ranking?: string;
-  fundHouseLogoUrl?: string; // New Field for Logo
 }
 
 export interface FundHistoryPoint {
